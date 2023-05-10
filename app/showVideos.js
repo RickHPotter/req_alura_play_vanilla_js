@@ -1,17 +1,26 @@
 import { connectAPI } from "./connectAPI.js"
 
-const list = document.querySelector('[data-list]')
+const listDOM = document.querySelector('[data-list]')
+const searchInputDOM = document.querySelector('[data-search-input]')
+const searchButtonDOM = document.querySelector('[data-search-btn]')
+
+
+function buildSection(elements) {
+  listDOM.innerHTML = ''
+  elements.forEach((element) => buildCard(element))
+}
 
 function buildCard(element) {
   const card = document.createElement('li')
   card.classList.add('videos__item')
+  card.dataset.id = element.id
 
   card.innerHTML = `
     <iframe
       width="100%"
       height="72%"
       src=${element.url}
-      title=${element.titulo}
+      title=${element.title}
       frameborder="0"
       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
       allowfullscreen
@@ -21,30 +30,67 @@ function buildCard(element) {
   const div = document.createElement('div')
   div.classList.add('descricao-video')
   div.innerHTML = `
-    <img src=${element.imagem} alt=logo do ${element.titulo} />
-    <h3>${element.titulo}</h3>
-    <p>${element.descricao}</p>
+    <img src=${element.img} alt=logo ${element.title} />
+    <h3>${element.title}</h3>
+    <p>${element.desc}</p>
   `
 
   card.appendChild(div)
-  list.appendChild(card)
+  listDOM.appendChild(card)
 }
-
-
-// <div class="descricao-video">
-//   <img src="./img/logo.png" alt="logo canal alura" />
-//   <h3>Qual é o melhor hardware para programação com Mario Souto</h3>
-//   <p>236 mil visualizações</p>
-// </div>
 
 async function listVideo() {
-  const videosList = await connectAPI.listVideos()
-  videosList.forEach(buildCard)
+  try {
+    const videosList = await connectAPI.readVideos()
+    buildSection(videosList)
+  } catch {
+    listDOM.innerHTML = `<h2 class = "mensagem__titulo">
+    Something happened while fetching videos.
+    </h2>`
+  }
 }
 
+async function listVideoWhere(query) {
+  try {
+    const videosList = await connectAPI.readVideosWhere(query)
+    if (videosList[0] == undefined) {
+      listDOM.innerHTML = `<h2 class = "mensagem__titulo">
+      No videos found.
+      </h2>`
+    } else {
+      buildSection(videosList)
+    }
+  } catch {
+    listDOM.innerHTML = `<h2 class = "mensagem__titulo">
+    Something happened while fetching videos.
+    </h2>`
+  }
+}
 
 // !
 // * MAIN *
 // !
 
 listVideo()
+
+document.addEventListener("keypress", (event) => {
+  event.preventDefault()
+
+  if (event.key === "/") {
+    searchInputDOM.focus()
+    searchInputDOM.innerHTML = ''
+  }
+});
+
+searchInputDOM.addEventListener("keypress", (event) => {
+  if (event.key === "Enter") {
+      searchButtonDOM.click();
+  }
+});
+
+searchButtonDOM.addEventListener('click', (event) => {
+  event.preventDefault()
+
+  const query = searchInputDOM.value
+  listVideoWhere(query)
+})
